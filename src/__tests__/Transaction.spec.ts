@@ -12,6 +12,7 @@ let connection: Connection;
 
 describe('Transaction', () => {
   beforeAll(async () => {
+    createConnection();
     connection = await createConnection('test-connection');
     await connection.runMigrations();
   });
@@ -23,7 +24,6 @@ describe('Transaction', () => {
 
   afterAll(async () => {
     const mainConnection = getConnection();
-
     await connection.close();
     await mainConnection.close();
   });
@@ -53,6 +53,7 @@ describe('Transaction', () => {
     const response = await request(app).get('/transactions');
 
     expect(response.body.transactions).toHaveLength(3);
+
     expect(response.body.balance).toMatchObject({
       income: 8000,
       outcome: 6000,
@@ -192,12 +193,16 @@ describe('Transaction', () => {
   });
 
   it('should be able to import transactions', async () => {
-    const transactionsRepository = getRepository(Transaction);
-    const categoriesRepository = getRepository(Category);
-
     const importCSV = path.resolve(__dirname, 'import_template.csv');
 
     await request(app).post('/transactions/import').attach('file', importCSV);
+
+    const transactionsRepository = getRepository(
+      Transaction,
+      'test-connection',
+    );
+
+    const categoriesRepository = getRepository(Category, 'test-connection');
 
     const transactions = await transactionsRepository.find();
     const categories = await categoriesRepository.find();
